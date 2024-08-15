@@ -44,10 +44,9 @@
 	\subsection{Job Lists}
 	A Job represents a task or assignment for a client, storing details such as the job number and contact person. When creating a Job, you must provide the required fields and ensure that the site ID is included.
 	
-	\section{Manually Connecting to the Import Service Pipe}
+	\section{Manually Connecting to the Import Service Via Named Pipes}
 	
-	\subsection{Overview}
-	The Toog service uses named pipes for communication. This section outlines the process for connecting to the Toog service, sending the required data, and interacting with the service.
+	The Toog service uses named pipes for communication normally you should connect via the provided libraries however if required, this section outlines the process for connecting to the Toog service, sending the required data, and interacting with the service.
 	
 	\subsection{Connection Process}
 	
@@ -155,5 +154,66 @@
 	When creating or parsing a message, ensure the header fields are properly set and that the body conforms to the expected format for the specified message type.
 	
 	In summary, a \texttt{Message} consists of a header with metadata (format, type, ID, and length) and a body containing the actual data. Proper structuring and interpretation of these components are crucial for effective communication within the Toog Import Service.
+	
+	
+	\section{Message Content And Service Responses}
+ Toog Import Service server can send data to the client below describes the different message types, their content, and their usage in the communication between the server and client.
+	
+	\section{Message Types}
+	
+	\subsection{ImportTypesResponse}
+	The \texttt{ImportTypesResponse} message provides details about the import types available in the system. It includes:
+	\begin{itemize}
+		\item \textbf{ImportTypes}: A list of available import types. Each import type contains:
+		\begin{itemize}
+			\item \textbf{Id}: The unique identifier for the import type.
+			\item \textbf{Name}: The name of the import type.
+			\item \textbf{Columns}: An array of column names associated with the import type.
+			\item \textbf{CommonItemPrefix}: A common prefix used for items in this import type.
+		\end{itemize}
+		\item \textbf{DefaultImportTypeId}: The identifier of the default import type.
+	\end{itemize}
+	
+	\subsection{Job}
+	The \texttt{Job} message provides information about jobs in the system. It includes:
+	\begin{itemize}
+		\item \textbf{Jobs}: A list of jobs. Each job contains:
+		\begin{itemize}
+			\item \textbf{Id}: The unique identifier of the job.
+			\item \textbf{Name}: The name of the job.
+			\item \textbf{JobStatusId}: The identifier of the job status.
+			\item \textbf{JobNumber}: The number associated with the job.
+			\item \textbf{SiteId}: The identifier of the site where the job is located.
+			\item \textbf{Collections}: A list of collections associated with the job.
+		\end{itemize}
+		\item \textbf{JobStatuses}: A list of job statuses. Each status contains:
+		\begin{itemize}
+			\item \textbf{Id}: The unique identifier of the job status.
+			\item \textbf{Name}: The name of the job status.
+		\end{itemize}
+	\end{itemize}
+	
+	\subsection{Site}
+	The \texttt{Site} message provides information about sites. It includes:
+	\begin{itemize}
+		\item \textbf{Url}: The URL of the site.
+		\item \textbf{Sites}: A list of sites. Each site contains:
+		\begin{itemize}
+			\item \textbf{Id}: The unique identifier of the site.
+			\item \textbf{Name}: The name of the site.
+			\item \textbf{AccountId}: The identifier of the account associated with the site.
+			\item \textbf{Details}: The details of the site, including:
+			\begin{itemize}
+				\item \textbf{Address1}: The first line of the address.
+				\item \textbf{Address2}: The second line of the address.
+				\item \textbf{Address3}: The third line of the address.
+				\item \textbf{City}: The city of the site.
+				\item \textbf{State}: The state of the site.
+				\item \textbf{Zip}: The ZIP code of the site.
+				\item \textbf{Country}: The country of the site.
+			\end{itemize}
+		\end{itemize}
+		\item \textbf{JobStatuses}: A list of job statuses available at the site.
+	\end{itemize}
 	
 \end{document}
