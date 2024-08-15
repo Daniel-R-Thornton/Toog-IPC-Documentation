@@ -1,61 +1,159 @@
 \documentclass{memoir}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
 
 \begin{document}
 	
 	\title{The Toog Software Import Specification Format}
 	\maketitle
-	\pagebreak
 	\tableofcontents
 	\pagebreak
 	
 	\section{Introduction}
 	
 	\subsection{What Is Toog?}
-	\paragraph{
-		Toog is a customer relations management system, quoting package, and more. Toog allows users to create and manage jobs, customers, suppliers, pricing, and quotes. Users can currently import their jobs from third-party packages using the CSV import system from within the TOOG web application. This allows them to create all items from an existing job with their requisite inventory items and manufactured parts. These parts are then used to generate a quote that can be handed over to their customers. TOOG aims to streamline this process by making a service available that will allow third-party desktop applications to tightly couple their logic with TOOG through a Windows/GNU-Linux/Mac service/daemon.}
+	Toog is a customer relations management system, quoting package, and more. Toog allows users to create and manage jobs, customers, suppliers, pricing, and quotes. Users can currently import their jobs from third-party packages using the CSV import system from within the TOOG web application. This feature enables the creation of items from an existing job with their requisite inventory items and manufactured parts, which are then used to generate a quote for customers. Toog aims to streamline this process by providing a service that allows third-party desktop applications to integrate closely with Toog through a service or daemon available on Windows, GNU-Linux, and Mac.
 	
 	\subsection{Toog Software Import Service}
-	
-	\paragraph{
-		The Toog Import service and its companion libraries provide simple functions that third-party applications can use to connect to TOOG. These libraries allow for the creation of jobs, collections, and items locally without needing to interact with TOOG directly, lowering the barrier for third-party software integration. There are three methods for connecting to the Toog Import service:
-	}
+	The Toog Import service and its companion libraries provide functions for third-party applications to connect to Toog. These libraries facilitate job creation, collections, and item management locally without needing direct interaction with Toog, simplifying third-party software integration. There are three methods to connect to the Toog Import service:
 	
 	\begin{itemize}
 		\item Manual connection using a named pipe
 		\item Communication via the Windows native DLL (Toog.Import.dll and Toog.Import.h) (available soon)
-		\item Communication via the .NET Core class library (Toog.Import.dll), implemented in .NET (also coming soon)
+		\item Communication via the .NET Core class library (Toog.Import.dll), implemented in .NET (coming soon)
 	\end{itemize}
 	
-	\paragraph{
-		Toog recommends using the Windows native DLL on Windows systems, as it offers faster performance and broader support for different programming environments. The .NET Core class library is intended for applications that run on multiple platforms or applications developed in .NET. It is strongly recommended not to directly connect to the named pipe as you are responsible for ensuring data meets the Toog Message standard. Incorrectly formatted messages will be discarded, and the pipe will close.
-	}
+	It is recommended to use the Windows native DLL for Windows systems due to its superior performance and broader support. The .NET Core class library is intended for multi-platform applications or those developed in .NET. Directly connecting to the named pipe is not recommended due to the need for adherence to the Toog Message standard; improperly formatted messages will be discarded, and the pipe will close.
 	
 	\section{Important Concepts}
 	
-	\subsubsection{Document Hierarchy}
+	\subsection{Document Hierarchy}
+	Understanding Toog's internal object hierarchy is crucial when creating imports. The hierarchy is as follows:
+	\begin{quote}
+		\textit{Account → Site → Job → Collection → Item}
+	\end{quote}
+	When interfacing with Toog, you must create or reference a job and collection to import data.
 	
-	\paragraph{
-		Toog software's internal hierarchy for objects is crucial to understand when creating imports. The hierarchy is as follows: \textit{Account → Site → Job → Collection → Item.} When interfacing with Toog, you will be required to either create or reference a job and collection to import data.
-	}
+	\subsection{Accounts}
+	For using the Toog Software Import Service, an in-depth understanding of the Account object is not required. The service provides a method to fetch a list of current Toog customers, each with their account name, ID, and basic contact information. When creating a Job, you must include the ID of the account for which the user wants to create the Job. If this ID is not provided, creation will fail.
 	
-	\subsubsection{Accounts}
+	\subsection{Sites}
+	Sites are associated with Accounts and act as parent entities for Job lists. Sites are automatically generated when an account is created in Toog, but users can also create their own Sites. When fetching accounts, Toog returns a flattened list of Sites, where the account name is prefixed to the site name (e.g., Account1/Site1). This structure helps to separate accounts or present them to the user as needed. The provided ID corresponds to the Site and is necessary when creating a Job, as the Site is the direct parent of the Job, not the Account.
 	
-	\paragraph{
-		For the use of the Toog Software Import Service, an in-depth understanding of the Account object is not required. The service provides a method to fetch a list of the current Toog customers, each with their account name, ID, and some basic contact information. When creating a Job, you must include the ID of the account for which the user wants to create the Job (see message structure later). If this ID is not provided, the creation \textbf{will} fail.
-	}
+	\subsection{Job Lists}
+	A Job represents a task or assignment for a client, storing details such as the job number and contact person. When creating a Job, you must provide the required fields and ensure that the site ID is included.
 	
-	\subsubsection{Sites}
+	\section{Manually Connecting to the Import Service Pipe}
 	
-\paragraph{
-	Sites are associated with Accounts and act as the parent entities for Job lists. For simplicity and efficiency, Sites are automatically generated when an account is created in Toog; however, users have the option to create their own Sites. When fetching accounts, Toog returns a flattened list of Sites, where the account name is prefixed to the site name (e.g., Account1/Site1). This structure can be used to separate accounts or presented to the user as is. The provided ID corresponds to the Site, which is necessary when creating a Job, as the Site is the direct parent of the Job, not the Account.
-}
-
-	\subsubsection{Job Lists}
+	\subsection{Overview}
+	The Toog service uses named pipes for communication. This section outlines the process for connecting to the Toog service, sending the required data, and interacting with the service.
 	
-	\paragraph{
-		A Job represents a task or assignment for a client and stores the job number, contact person, and more. When creating a Job, you must provide the required fields and ensure that the site ID is included.
-	}
+	\subsection{Connection Process}
 	
+	\subsubsection{Establishing Initial Connection}
+	\begin{enumerate}
+		\item \textbf{Create a Named Pipe Client:} Initialize a named pipe client to connect to the Toog service with the pipe name "ToogSoftwareImportService.pipe".
+		\item \textbf{Connect to the Pipe:} Establish a connection to the named pipe server.
+	\end{enumerate}
 	
+	\subsubsection{Sending Initial Data}
+	\begin{enumerate}
+		\item \textbf{Prepare the API Key Message:} Send a message containing the API key for authentication. The message should have the following details:
+		\begin{itemize}
+			\item \textbf{Message Type:} \texttt{none}
+			\item \textbf{Message Format:} \texttt{utf8}
+			\item \textbf{Message Body:} The API key as a string
+		\end{itemize}
+		\item \textbf{Send the Message:} Transmit the API key message to the Toog service.
+	\end{enumerate}
+	
+	\subsubsection{Handling Service Response}
+	\begin{enumerate}
+		\item \textbf{Receive Session Pipe Name:} After sending the API key, the service will respond with a new pipe name for the session. Extract this session pipe name from the response.
+		\item \textbf{Disconnect from Initial Pipe:} Close the initial pipe connection once the session pipe name is received.
+	\end{enumerate}
+	
+	\subsubsection{Communicating via Session Pipe}
+	\begin{enumerate}
+		\item \textbf{Create New Named Pipe Client:} Use the session pipe name received to initialize a new named pipe client for ongoing communication.
+		\item \textbf{Connect to Session Pipe:} Establish a connection to the session pipe.
+		\item \textbf{Send and Receive Messages:} Use the session pipe to send and receive messages according to the service's protocol. The message format and types should be as follows:
+		\begin{itemize}
+			\item \textbf{Message Type:} Specify the type of message (e.g., \texttt{startImport}, \texttt{queryJobs}).
+			\item \textbf{Message Format:} Specify the format of the message body (e.g., \texttt{utf8}).
+			\item \textbf{Message Body:} The actual data to be transmitted.
+		\end{itemize}
+	\end{enumerate}
+	
+	\subsubsection{Closing the Connection}
+	\begin{enumerate}
+		\item \textbf{Dispose of Named Pipe Client:} After completing communication, properly dispose of the named pipe client to free resources.
+	\end{enumerate}
+	
+	\section{Example Communication Flow}
+	\begin{enumerate}
+		\item Initialize a named pipe client and connect to "ToogSoftwareImportService.pipe".
+		\item Send an API key with \texttt{MessageType.none} and \texttt{MessageFormat.utf8}.
+		\item Receive the session pipe name from the service and disconnect from the initial pipe.
+		\item Create a new named pipe client using the session pipe name and connect.
+		\item Send and receive messages according to the service protocol.
+		\item Dispose of the named pipe client after communication is complete.
+	\end{enumerate}
+	
+	\section{Message Overview}
+	
+	\subsection{Message Structure}
+	A \texttt{Message} in the Toog Import Service is a structured data packet used for communication between the client and server. It consists of a header and a body.
+	
+	\subsubsection{Header}
+	The header contains metadata about the message and is composed of the following fields:
+	\begin{itemize}
+		\item \textbf{Message Format (4 bytes):} Indicates the format of the message data. Possible formats and their 4-byte representations are:
+		\begin{itemize}
+			\item \texttt{None} (0): \texttt{00 00 00 00}
+			\item \texttt{utf8} (1): \texttt{00 00 00 01}
+			\item \texttt{image\_bmp} (2): \texttt{00 00 00 02}
+			\item \texttt{image\_png} (3): \texttt{00 00 00 03}
+			\item \texttt{image\_jpg} (4): \texttt{00 00 00 04}
+			\item \texttt{raw} (5): \texttt{00 00 00 05}
+		\end{itemize}
+		\item \textbf{Message Type (4 bytes):} Specifies the type of message. Example values and their 4-byte representations are:
+		\begin{itemize}
+			\item \texttt{none} (0): \texttt{00 00 00 00}
+			\item \texttt{startImport} (1): \texttt{00 00 00 01}
+			\item \texttt{lineItem} (2): \texttt{00 00 00 02}
+			\item \texttt{endImport} (3): \texttt{00 00 00 03}
+			\item \texttt{queryAccounts} (4): \texttt{00 00 00 04}
+			\item \texttt{queryJobs} (5): \texttt{00 00 00 05}
+			\item \texttt{queryImportTypes} (6): \texttt{00 00 00 06}
+		\end{itemize}
+		\item \textbf{Message ID (16 bytes):} A unique identifier for the message used for tracking and error reporting.
+		\item \textbf{Message Length (4 bytes):} The length of the message body, which helps determine how many bytes to read. Example values and their 4-byte representations are:
+		\begin{itemize}
+			\item \texttt{0} bytes: \texttt{00 00 00 00}
+			\item \texttt{256} bytes: \texttt{00 00 01 00}
+			\item \texttt{1024} bytes: \texttt{00 00 04 00}
+		\end{itemize}
+	\end{itemize}
+	
+	The header fields are sequentially ordered within the first 22 bytes of the message:
+	\begin{itemize}
+		\item Bytes 0-3: Message Format
+		\item Bytes 4-7: Message Type
+		\item Bytes 8-23: Message ID
+		\item Bytes 24-27: Message Length
+	\end{itemize}
+	
+	\subsubsection{Body}
+	The body of the message starts at byte offset 0x22 (34 in decimal) and contains the actual data being transmitted. The content and format of the body depend on the message type and format specified in the header. For example:
+	\begin{itemize}
+		\item For a text message, the body would be a UTF-8 encoded string (typically JSON).
+		\item For an image message, the body would contain binary data of the image file.
+	\end{itemize}
+	
+	When creating or parsing a message, ensure the header fields are properly set and that the body conforms to the expected format for the specified message type.
+	
+	In summary, a \texttt{Message} consists of a header with metadata (format, type, ID, and length) and a body containing the actual data. Proper structuring and interpretation of these components are crucial for effective communication within the Toog Import Service.
 	
 \end{document}
