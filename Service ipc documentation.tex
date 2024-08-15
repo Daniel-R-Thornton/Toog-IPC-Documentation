@@ -1,0 +1,61 @@
+\documentclass{memoir}
+
+\begin{document}
+	
+	\title{The Toog Software Import Specification Format}
+	\maketitle
+	\pagebreak
+	\tableofcontents
+	\pagebreak
+	
+	\section{Introduction}
+	
+	\subsection{What Is Toog?}
+	\paragraph{
+		Toog is a customer relations management system, quoting package, and more. Toog allows users to create and manage jobs, customers, suppliers, pricing, and quotes. Users can currently import their jobs from third-party packages using the CSV import system from within the TOOG web application. This allows them to create all items from an existing job with their requisite inventory items and manufactured parts. These parts are then used to generate a quote that can be handed over to their customers. TOOG aims to streamline this process by making a service available that will allow third-party desktop applications to tightly couple their logic with TOOG through a Windows/GNU-Linux/Mac service/daemon.}
+	
+	\subsection{Toog Software Import Service}
+	
+	\paragraph{
+		The Toog Import service and its companion libraries provide simple functions that third-party applications can use to connect to TOOG. These libraries allow for the creation of jobs, collections, and items locally without needing to interact with TOOG directly, lowering the barrier for third-party software integration. There are three methods for connecting to the Toog Import service:
+	}
+	
+	\begin{itemize}
+		\item Manual connection using a named pipe
+		\item Communication via the Windows native DLL (Toog.Import.dll and Toog.Import.h) (available soon)
+		\item Communication via the .NET Core class library (Toog.Import.dll), implemented in .NET (also coming soon)
+	\end{itemize}
+	
+	\paragraph{
+		Toog recommends using the Windows native DLL on Windows systems, as it offers faster performance and broader support for different programming environments. The .NET Core class library is intended for applications that run on multiple platforms or applications developed in .NET. It is strongly recommended not to directly connect to the named pipe as you are responsible for ensuring data meets the Toog Message standard. Incorrectly formatted messages will be discarded, and the pipe will close.
+	}
+	
+	\section{Important Concepts}
+	
+	\subsubsection{Document Hierarchy}
+	
+	\paragraph{
+		Toog software's internal hierarchy for objects is crucial to understand when creating imports. The hierarchy is as follows: \textit{Account → Site → Job → Collection → Item.} When interfacing with Toog, you will be required to either create or reference a job and collection to import data.
+	}
+	
+	\subsubsection{Accounts}
+	
+	\paragraph{
+		For the use of the Toog Software Import Service, an in-depth understanding of the Account object is not required. The service provides a method to fetch a list of the current Toog customers, each with their account name, ID, and some basic contact information. When creating a Job, you must include the ID of the account for which the user wants to create the Job (see message structure later). If this ID is not provided, the creation \textbf{will} fail.
+	}
+	
+	\subsubsection{Sites}
+	
+\paragraph{
+	Sites are associated with Accounts and act as the parent entities for Job lists. For simplicity and efficiency, Sites are automatically generated when an account is created in Toog; however, users have the option to create their own Sites. When fetching accounts, Toog returns a flattened list of Sites, where the account name is prefixed to the site name (e.g., Account1/Site1). This structure can be used to separate accounts or presented to the user as is. The provided ID corresponds to the Site, which is necessary when creating a Job, as the Site is the direct parent of the Job, not the Account.
+}
+
+	\subsubsection{Job Lists}
+	
+	\paragraph{
+		A Job represents a task or assignment for a client and stores the job number, contact person, and more. When creating a Job, you must provide the required fields and ensure that the site ID is included.
+	}
+	
+	
+	
+\end{document}
