@@ -2,57 +2,173 @@
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{listings}
 
 \begin{document}
 	
-	\title{The Toog Software Import Specification Format}
+	\title{The TOOG Software Import Specification Format}
 	\maketitle
 	\tableofcontents
 	\pagebreak
-	
+	\author{Daniel Thornton}
 	\section{Introduction}
 	
-	\subsection{What Is Toog?}
-	Toog is a customer relations management system, quoting package, and more. Toog allows users to create and manage jobs, customers, suppliers, pricing, and quotes. Users can currently import their jobs from third-party packages using the CSV import system from within the TOOG web application. This feature enables the creation of items from an existing job with their requisite inventory items and manufactured parts, which are then used to generate a quote for customers. Toog aims to streamline this process by providing a service that allows third-party desktop applications to integrate closely with Toog through a service or daemon available on Windows, GNU-Linux, and Mac.
+	\subsection{What Is TOOG?}
+	TOOG is a customer relations management system, quoting package, and more. TOOG allows users to create and manage jobs, customers, suppliers, pricing, and quotes. Users can currently import their jobs from third-party packages using the CSV import system from within the TOOG web application. This feature enables the creation of items from an existing job with their requisite inventory items and manufactured parts, which are then used to generate a quote for customers. TOOG aims to streamline this process by providing a service that allows third-party desktop applications to integrate closely with TOOG through a service or daemon available on Windows, GNU-Linux, and Mac.
 	
-	\subsection{Toog Software Import Service}
-	The Toog Import service and its companion libraries provide functions for third-party applications to connect to Toog. These libraries facilitate job creation, collections, and item management locally without needing direct interaction with Toog, simplifying third-party software integration. There are three methods to connect to the Toog Import service:
+	\subsection{TOOG Software Import Service}
+	The TOOG Import service and its companion libraries provide functions for third-party applications to connect to TOOG. These libraries facilitate job creation, collections, and item management locally without needing direct interaction with TOOG, simplifying third-party software integration. There are three methods to connect with the TOOG Import service:
 	
 	\begin{itemize}
-		\item Manual connection using a named pipe
-		\item Communication via the Windows native DLL (Toog.Import.dll and Toog.Import.h) (available soon)
-		\item Communication via the .NET Core class library (Toog.Import.dll), implemented in .NET (coming soon)
+		\item Manual connection using a named pipes.
+		\item Communication via the Windows native DLL (TOOG.Import.dll and TOOG.Import.h) (available soon)
+		\item Communication via the .NET Core class library (TOOG.Import.dll), implemented in .NET (coming soon)
 	\end{itemize}
 	
-	It is recommended to use the Windows native DLL for Windows systems due to its superior performance and broader support. The .NET Core class library is intended for multi-platform applications or those developed in .NET. Directly connecting to the named pipe is not recommended due to the need for adherence to the Toog Message standard; improperly formatted messages will be discarded, and the pipe will close.
+	It is recommended to use the Windows native DLL for Windows systems due to its superior performance and broader support. The .NET Core class library is intended for multi-platform applications or those developed in .NET.
 	
 	\section{Important Concepts}
 	
 	\subsection{Document Hierarchy}
-	Understanding Toog's internal object hierarchy is crucial when creating imports. The hierarchy is as follows:
+	Understanding TOOG's internal object hierarchy is crucial when creating imports. The hierarchy is as follows:
 	\begin{quote}
 		\textit{Account → Site → Job → Collection → Item}
 	\end{quote}
-	When interfacing with Toog, you must create or reference a job and collection to import data.
+	When interfacing with TOOG, you must create or reference a job and collection to import data.
 	
 	\subsection{Accounts}
-	For using the Toog Software Import Service, an in-depth understanding of the Account object is not required. The service provides a method to fetch a list of current Toog customers, each with their account name, ID, and basic contact information. When creating a Job, you must include the ID of the account for which the user wants to create the Job. If this ID is not provided, creation will fail.
+	For using the TOOG Software Import Service, an in-depth understanding of the Account object is not required. The service provides a method to fetch a list of current TOOG customers, each with their account name, ID, and basic contact information. When creating a Job, you must include the ID of the account for which the user wants to create the Job. If this ID is not provided, creation will fail.
 	
 	\subsection{Sites}
-	Sites are associated with Accounts and act as parent entities for Job lists. Sites are automatically generated when an account is created in Toog, but users can also create their own Sites. When fetching accounts, Toog returns a flattened list of Sites, where the account name is prefixed to the site name (e.g., Account1/Site1). This structure helps to separate accounts or present them to the user as needed. The provided ID corresponds to the Site and is necessary when creating a Job, as the Site is the direct parent of the Job, not the Account.
+	Sites are associated with Accounts and act as parent entities for Job lists. Sites are automatically generated when an account is created in TOOG, but users can also create their own Sites. When fetching accounts, TOOG returns a flattened list of Sites, where the account name is prefixed to the site name (e.g., Account1/Site1). This structure helps to separate accounts or present them to the user as needed. The provided ID corresponds to the Site and is necessary when creating a Job, as the Site is the direct parent of the Job, not the Account.
 	
 	\subsection{Job Lists}
 	A Job represents a task or assignment for a client, storing details such as the job number and contact person. When creating a Job, you must provide the required fields and ensure that the site ID is included.
 	
+	\subsection{Import Types}
+	
+	Import Types in TOOG enable the importing of data from a wide range of applications. TOOG maps columns from a CSV file to internal attributes and inventory items, creating new items within a job based on data exported from third-party applications. Import Types support the following special columns and Properties:
+	
+	\begin{enumerate}[]
+		\item \textbf{Name}\\
+		\textit{The name that the newly created item will use, e.g., "End Left".}
+		
+		\item \textbf{Quantity}\\
+		\textit{The quantity of the item to be created during the import. Note: Creating with a quantity of X does not create multiple items.}
+		
+		\item \textbf{Blueprint}\\
+		\textit{Specifies the type of item to create, such as a cabinet, part, or similar.}
+		
+		\item \textbf{Common Item Prefix}\\
+		\textit{Sets a prefix for all common item properties.}
+		
+		\item \textbf{Common Item Column}\\
+		\textit{Allows you to import items as children of a "common item," with the parent being the common item. This name should be unique across parents but shared among children. For example:}
+		
+		A cabinet with the following structure:
+		
+		\begin{verbatim}
+			{
+				"cabinet1": {
+					"name": "floor two-door",
+					"parts": [
+					{
+						"name": "end left"
+					},
+					{
+						"name": "end right"
+					}
+					]
+				},
+				"cabinet2": {
+					"name": "floor two-door",
+					"parts": [
+					{
+						"name": "end left"
+					},
+					{
+						"name": "end right"
+					}
+					]
+				}
+			}
+		\end{verbatim}
+		
+		In this example, "cabinet1" and "cabinet2" are common items, and each child part (e.g., "end left" or "end right") is associated with its respective common item ("cabinet1" or "cabinet2"). The common item prefix is used to set up properties for the common item (e.g., quantity). For instance, if your quantity column is "qty" and you use a common item prefix of "cab", TOOG would look for the "cabqty".
+		
+		\item \textbf{Group}\\
+		\textit{Groups items together as needed (within a common item)}
+	\end{enumerate}
+	
+	\subsection{Import Types}
+	
+	Import Types in TOOG enable the importing of data from a wide range of applications. TOOG maps columns from a CSV file to internal attributes and inventory items, creating new items within a job based on data exported from third-party applications. Import Types support the following special columns:
+	
+	\begin{enumerate}[]
+		\item \textbf{Name}\\
+		\textit{The name that the newly created item will use, e.g., "Floor standard 200".}
+		
+		\item \textbf{Quantity}\\
+		\textit{The quantity of the item to be created during the import. Note: Creating with a quantity of X does not create multiple items but rather sets their qty.}
+		
+		\item \textbf{Blueprint}\\
+		\textit{Specifies the type of item to create, such as a cabinet, part, or similar.}
+		
+		\item \textbf{Common Item Prefix}\\
+		\textit{Sets a prefix for all common item properties.}
+		
+		\item \textbf{Common Item Column}\\
+		\textit{Allows you to import items as children of a "common item," with the parent being the common item. This name should be unique across parents but shared among children. For example:}
+		
+		A cabinet with the following structure:
+		
+		\begin{verbatim}
+			{
+				"cabinet1": {
+					"name": "floor two-door",
+					"parts": [
+					{
+						"name": "end left"
+					},
+					{
+						"name": "end right"
+					}
+					]
+				},
+				"cabinet2": {
+					"name": "floor two-door",
+					"parts": [
+					{
+						"name": "end left"
+					},
+					{
+						"name": "end right"
+					}
+					]
+				}
+			}
+		\end{verbatim}
+		
+		In this example, "cabinet1" and "cabinet2" are common items, and each child part (e.g., "end left" or "end right") is associated with its respective common item ("cabinet1" or "cabinet2"). The common item prefix is used to set up properties for the common item (e.g., quantity). For instance, if your quantity column is "qty" and you use a common item prefix of "cab", TOOG would look for "cabqty".
+		
+		\item \textbf{Group}\\
+		\textit{Groups items together as needed.}
+	\end{enumerate}
+	\subsection{Import Line Items}
+	\subsection{Quoting}
+	
+	\subsection{Inventory Management \& Attributes}
+	\pagebreak
+	
 	\section{Manually Connecting to the Import Service Via Named Pipes}
 	
-	The Toog service uses named pipes for communication normally you should connect via the provided libraries however if required, this section outlines the process for connecting to the Toog service, sending the required data, and interacting with the service.
+	The TOOG service uses named pipes for communication normally you should connect via the provided libraries however if required, this section outlines the process for connecting to the TOOG service, sending the required data, and interacting with the service.
 	
 	\subsection{Connection Process}
 	
 	\subsubsection{Establishing Initial Connection}
 	\begin{enumerate}
-		\item \textbf{Create a Named Pipe Client:} Initialize a named pipe client to connect to the Toog service with the pipe name "ToogSoftwareImportService.pipe".
+		\item \textbf{Create a Named Pipe Client:} Initialize a named pipe client to connect to the TOOG service with the pipe name "TOOGSoftwareImportService.pipe".
 		\item \textbf{Connect to the Pipe:} Establish a connection to the named pipe server.
 	\end{enumerate}
 	
@@ -64,7 +180,7 @@
 			\item \textbf{Message Format:} \texttt{utf8}
 			\item \textbf{Message Body:} The API key as a string
 		\end{itemize}
-		\item \textbf{Send the Message:} Transmit the API key message to the Toog service.
+		\item \textbf{Send the Message:} Transmit the API key message to the TOOG service.
 	\end{enumerate}
 	
 	\subsubsection{Handling Service Response}
@@ -92,7 +208,7 @@
 	
 	\section{Example Communication Flow}
 	\begin{enumerate}
-		\item Initialize a named pipe client and connect to "ToogSoftwareImportService.pipe".
+		\item Initialize a named pipe client and connect to "TOOGSoftwareImportService.pipe".
 		\item Send an API key with \texttt{MessageType.none} and \texttt{MessageFormat.utf8}.
 		\item Receive the session pipe name from the service and disconnect from the initial pipe.
 		\item Create a new named pipe client using the session pipe name and connect.
@@ -103,7 +219,7 @@
 	\section{Message Overview}
 	
 	\subsection{Message Structure}
-	A \texttt{Message} in the Toog Import Service is a structured data packet used for communication between the client and server. It consists of a header and a body.
+	A \texttt{Message} in the TOOG Import Service is a structured data packet used for communication between the client and server. It consists of a header and a body.
 	
 	\subsubsection{Header}
 	The header contains metadata about the message and is composed of the following fields:
@@ -153,11 +269,11 @@
 	
 	When creating or parsing a message, ensure the header fields are properly set and that the body conforms to the expected format for the specified message type.
 	
-	In summary, a \texttt{Message} consists of a header with metadata (format, type, ID, and length) and a body containing the actual data. Proper structuring and interpretation of these components are crucial for effective communication within the Toog Import Service.
+	In summary, a \texttt{Message} consists of a header with metadata (format, type, ID, and length) and a body containing the actual data. Proper structuring and interpretation of these components are crucial for effective communication within the TOOG Import Service.
 	
 	
 	\section{Message Content And Service Responses}
- Toog Import Service server can send data to the client below describes the different message types, their content, and their usage in the communication between the server and client.
+	TOOG Import Service server can send data to the client below describes the different message types, their content, and their usage in the communication between the server and client.
 	
 	\section{Message Types}
 	
